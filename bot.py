@@ -3,24 +3,26 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
+Telegram Bot Token
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-YOUR API
+Your Terabox API
 
 API = "https://api-production-359d.up.railway.app"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-await update.message.reply_text("📥 Send a TeraBox link.")
+await update.message.reply_text("📥 Send a Terabox link.")
 
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 url = update.message.text
 
-await update.message.reply_text("⏳ Processing TeraBox Link...")
+await update.message.reply_text("⏳ Processing Terabox Link...")
 
 try:
 
-    # STEP 1: Get file info
+    # Step 1: Get file info
     r = requests.post(f"{API}/generate_file", json={"url": url})
     data = r.json()
 
@@ -38,7 +40,7 @@ try:
         "fs_id": file["fs_id"]
     }
 
-    # STEP 2: Generate download link
+    # Step 2: Generate download link
     r2 = requests.post(f"{API}/generate_link", json=payload)
     link_data = r2.json()
 
