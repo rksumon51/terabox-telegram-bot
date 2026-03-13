@@ -1,15 +1,10 @@
-import os
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 
-API = "https://teradl-api.vercel.app/api"
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send a TeraBox link.")
+API = "https://api-production-359d.up.railway.app/api?url="
 
 
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -19,43 +14,26 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Processing TeraBox Link...")
 
     try:
-
-        r = requests.get(API, params={"url": url}, timeout=30)
-
-        if r.status_code != 200:
-            raise Exception("API server error")
-
+        r = requests.get(API + url)
         data = r.json()
 
-        video_url = None
+        video = data["video"]
 
-        # different possible response formats
-        if isinstance(data, dict):
+        await update.message.reply_text("📥 Downloading Video...")
 
-            if "video" in data and len(data["video"]) > 0:
-                video_url = data["video"][0].get("url")
+        file = requests.get(video)
 
-            elif "download" in data:
-                video_url = data["download"]
+        with open("video.mp4", "wb") as f:
+            f.write(file.content)
 
-            elif "url" in data:
-                video_url = data["url"]
-
-        if not video_url:
-            raise Exception("Download link not found")
-
-        await update.message.reply_text("📤 Uploading video...")
-
-        await update.message.reply_video(video=video_url)
+        await update.message.reply_video(video=open("video.mp4", "rb"))
 
     except Exception as e:
-
-        await update.message.reply_text(f"❌ Error: {str(e)}")
+        await update.message.reply_text(f"❌ Error: {e}")
 
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
 
 print("Bot Started")
