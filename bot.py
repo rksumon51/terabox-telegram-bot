@@ -5,39 +5,61 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, fil
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# TeraDL API
-API = "https://teradl-api.vercel.app/api"
+YOUR API
+
+API = "https://api-production-359d.up.railway.app"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send a TeraBox link.")
+await update.message.reply_text("📥 Send a TeraBox link.")
 
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    url = update.message.text
+url = update.message.text
 
-    await update.message.reply_text("⏳ Processing TeraBox Link...")
+await update.message.reply_text("⏳ Processing TeraBox Link...")
 
-    try:
+try:
 
-        r = requests.get(API, params={"url": url})
-        data = r.json()
+    # STEP 1: Get file info
+    r = requests.post(f"{API}/generate_file", json={"url": url})
+    data = r.json()
 
-        video = data["video"][0]["url"]
+    if data["status"] != "success":
+        await update.message.reply_text("❌ Failed to read link")
+        return
 
-        await update.message.reply_text("📤 Uploading video...")
+    file = data["list"][0]
 
-        await update.message.reply_video(video=video)
+    payload = {
+        "shareid": data["shareid"],
+        "uk": data["uk"],
+        "sign": data["sign"],
+        "timestamp": data["timestamp"],
+        "fs_id": file["fs_id"]
+    }
 
-    except Exception as e:
+    # STEP 2: Generate download link
+    r2 = requests.post(f"{API}/generate_link", json=payload)
+    link_data = r2.json()
 
-        await update.message.reply_text(f"❌ Error: {e}")
+    if link_data["status"] != "success":
+        await update.message.reply_text("❌ Failed to generate download link")
+        return
 
+    download_link = link_data["download_link"]
+
+    await update.message.reply_text("📤 Uploading video...")
+
+    await update.message.reply_video(video=download_link)
+
+except Exception as e:
+    await update.message.reply_text(f"❌ Error: {e}")
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
 
-print("Bot Started")
+print("🤖 Bot Started")
 
 app.run_polling()
