@@ -1,18 +1,58 @@
+import os
 import requests
-import re
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
-def get_download_link(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-    r = requests.get(url, headers=headers)
+API = "https://teradl-api.vercel.app/api"
 
-    html = r.text
 
-    match = re.search(r'https://[^"]+\.mp4', html)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Send a TeraBox link.")
 
-    if match:
-        return match.group(0)
-    else:
-        raise Exception("Download link not found")
+
+async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    url = update.message.text
+
+    await update.message.reply_text("⏳ Processing TeraBox Link...")
+
+    try:
+
+        r = requests.get(API, params={"url": url}, timeout=30)
+
+        if r.status_code != 200:
+            raise Exception("API server error")
+
+        data = r.json()
+
+        video_url = None
+
+        # different response structure handle
+        if "video" in data:
+            video_url = data["video"][0]["url"]
+
+        elif "download" in data:
+            video_url = data["download"]
+
+        if not video_url:
+            raise Exception("Download link not found")
+
+        await update.message.reply_text("📤 Uploading video...")
+
+        await update.message.reply_video(video=video_url)
+
+    except Exception as e:
+
+        await update.message.reply_text(f"❌ Error: {e}")
+
+
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
+
+print("Bot Started")
+
+app.run_polling()
