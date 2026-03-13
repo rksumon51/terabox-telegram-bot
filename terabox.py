@@ -29,12 +29,17 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         video_url = None
 
-        # different response structure handle
-        if "video" in data:
-            video_url = data["video"][0]["url"]
+        # different possible response formats
+        if isinstance(data, dict):
 
-        elif "download" in data:
-            video_url = data["download"]
+            if "video" in data and len(data["video"]) > 0:
+                video_url = data["video"][0].get("url")
+
+            elif "download" in data:
+                video_url = data["download"]
+
+            elif "url" in data:
+                video_url = data["url"]
 
         if not video_url:
             raise Exception("Download link not found")
@@ -45,7 +50,7 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
 
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text(f"❌ Error: {str(e)}")
 
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
